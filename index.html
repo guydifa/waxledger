@@ -47,8 +47,15 @@
   .brand{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; }
   .brand h1{ font-size:1.6rem; margin:0; color:#F7F1E3; }
   .brand .count{ color:#E4D9C4; font-size:0.9rem; }
+  .version-link{
+    background:none; border:none; padding:0; margin:0 0 0 auto;
+    font-family:'Public Sans', sans-serif; font-size:0.72rem;
+    color:#C9A15C; cursor:pointer;
+    text-decoration:underline dotted; text-underline-offset:2px;
+  }
+  .version-link:hover{ color:#F7F1E3; }
   .stats-row{
-    display:flex; gap:22px; margin-top:10px; flex-wrap:wrap;
+    display:flex; align-items:baseline; gap:22px; margin-top:10px; flex-wrap:wrap;
   }
   .stat{ display:flex; align-items:baseline; gap:6px; }
   .stat .num{ font-family:'Fraunces', serif; font-weight:600; font-size:1.3rem; color:#F7F1E3; }
@@ -260,8 +267,37 @@
   .detail-item .label{ font-size:0.72rem; color:var(--wick-soft); margin-bottom:2px; }
   .detail-item .value{ font-size:0.92rem; color:var(--wick); }
   .detail-item .value a{ color:var(--flame-deep); }
+  .detail-item .value.empty{ color:var(--line-strong); }
   .modal-notes{ font-size:0.88rem; font-style:italic; color:var(--wick-soft); margin-top:16px; }
   .store-logo{ height:18px; max-width:150px; object-fit:contain; vertical-align:middle; }
+
+  /* ---------- Changelog ---------- */
+  #changelogOverlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(43,36,28,0.55);
+    z-index:200;
+    align-items:flex-start; justify-content:center;
+    overflow-y:auto;
+    padding:40px 20px;
+  }
+  #changelogOverlay.open{ display:flex; }
+  .changelog-modal{
+    background:var(--wax);
+    max-width:520px; width:100%;
+    border-radius:2px;
+    box-shadow:0 30px 70px rgba(0,0,0,0.4);
+    padding:28px 28px 24px;
+    position:relative;
+  }
+  .changelog-modal h3{ margin:0 0 18px; padding-right:24px; }
+  .changelog-entry{ margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+  .changelog-entry:last-of-type{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .changelog-version{ font-family:'Fraunces', serif; font-weight:600; font-size:1.02rem; color:var(--wick); }
+  .changelog-date{ font-size:0.78rem; color:var(--wick-soft); margin:2px 0 8px; }
+  .changelog-entry ul{ margin:0; padding-left:18px; }
+  .changelog-entry li{ font-size:0.88rem; color:var(--wick); margin-bottom:4px; }
+  .changelog-footnote{ font-size:0.78rem; color:var(--wick-soft); font-style:italic; margin-top:16px; }
 </style>
 </head>
 <body>
@@ -310,6 +346,14 @@
 <div id="lightbox" onclick="if(event.target===this) closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close">&times;</button>
   <img id="lightboxImg" src="" alt="" onclick="closeLightbox()">  <div class="lightbox-strip" id="lightboxStrip"></div>
+</div>
+
+<div id="changelogOverlay" onclick="if(event.target===this) closeChangelog()">
+  <div class="changelog-modal">
+    <button class="modal-close" onclick="closeChangelog()" aria-label="Close">&times;</button>
+    <h3 class="serif">Version history</h3>
+    <div id="changelogBody"></div>
+  </div>
 </div>
 
 <script>
@@ -478,8 +522,9 @@ function yearSuffix(mfrDate){
 }
 
 function fieldRow(label, value){
-  if(value === null || value === undefined || value === '') return '';
-  return `<div class="detail-item"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+  const empty = (value === null || value === undefined || value === '');
+  const display = empty ? '—' : value;
+  return `<div class="detail-item"><div class="label">${label}</div><div class="value${empty ? ' empty' : ''}">${display}</div></div>`;
 }
 
 // Store logos: fill in with data URIs (e.g. "data:image/png;base64,...") to show
@@ -495,7 +540,10 @@ const STORE_LOGOS = {
 };
 
 function storeRow(store){
-  if(store === null || store === undefined || store === '') return '';
+  const empty = (store === null || store === undefined || store === '');
+  if(empty){
+    return `<div class="detail-item"><div class="label">Store</div><div class="value empty">—</div></div>`;
+  }
   const logo = STORE_LOGOS[String(store).toLowerCase()];
   const value = logo
     ? `<img src="${logo}" alt="${store}" class="store-logo">`
@@ -563,12 +611,12 @@ function renderPiece(){
       <div class="detail-grid">
         ${fieldRow('SKU', i.sku)}
         ${fieldRow('UPC', i.upc)}
-        ${fieldRow('Official name', i.officialName)}
         ${fieldRow('Season', i.season)}
-        ${fieldRow('Dimensions', dimStr)}
-        ${fieldRow('Online exclusive', i.onlineExclusive)}
+        ${fieldRow('Official name', i.officialName)}
         ${fieldRow('MFR date', i.mfrDate)}
         ${fieldRow('MFR price', money(i.mfrPrice))}
+        ${fieldRow('Online exclusive', i.onlineExclusive)}
+        ${fieldRow('Dimensions', dimStr)}
       </div>
     </div>
 
@@ -576,18 +624,14 @@ function renderPiece(){
       <h4>Ownership &amp; purchase</h4>
       <div class="detail-grid">
         ${fieldRow('Status', i.owned)}
-        ${fieldRow('Complete listing', i.completeListing)}
         ${fieldRow('Date acquired', i.dateAquired)}
+        ${fieldRow('Total price', money(i.purchasePrice))}
         ${storeRow(i.store)}
+        ${fieldRow('Quantity', i.qty)}
+        ${fieldRow('Store location', i.location)}
+        ${fieldRow('Complete listing', i.completeListing)}
         ${fieldRow('Seller', i.seller)}
-        ${fieldRow('Location', i.location)}
-        ${fieldRow('Qty', i.qty)}
-        ${fieldRow('Item price', money(i.itemPrice))}
-        ${fieldRow('Shipping', money(i.shipping))}
-        ${fieldRow('Marketplace fee', money(i.marketplaceFee))}
-        ${fieldRow('Tax', money(i.tax))}
-        ${fieldRow('Purchase price', money(i.purchasePrice))}
-        ${fieldRow('Listing', i.url ? `<a href="${i.url}" target="_blank" rel="noopener">View listing</a>` : null)}
+        ${i.url ? `<div class="detail-item"><div class="label">Listing</div><div class="value"><a href="${i.url}" target="_blank" rel="noopener">View listing</a></div></div>` : ''}
       </div>
     </div>
 
@@ -626,12 +670,90 @@ function closeLightbox(){
   document.getElementById('lightbox').classList.remove('open');
 }
 
+// ---------- Version / changelog ----------
+// Versioning: major.minor.patch
+//   major — a redesign or a change that breaks how the catalog is used
+//   minor — a new feature or capability
+//   patch — a fix, tweak, reordering, or copy change
+// UPDATED_AT should always be set to the exact time of the last edit below.
+const CURRENT_VERSION = '1.1.2';
+const UPDATED_AT = 'September 10, 2026, 3:21 PM ET';
+
+// Add a new entry to the top of this array each time the site is updated.
+const CHANGELOG = [
+  {
+    version: '1.1.2',
+    date: 'September 10, 2026',
+    changes: [
+      'Version / updated-time link is now right-justified in the stats row instead of trailing directly after Themes / Lines.'
+    ]
+  },
+  {
+    version: '1.1.1',
+    date: 'September 10, 2026',
+    changes: [
+      'Listing no longer shows a — placeholder when a piece has no saved URL; the row is omitted entirely.',
+      'Moved the version / updated-time link out of the top-right corner and into the stats row below the title, alongside Pieces / Sets / Themes.'
+    ]
+  },
+  {
+    version: '1.1.0',
+    date: 'September 10, 2026',
+    changes: [
+      'Switched to major.minor.patch version numbers instead of a flat v# counter.',
+      'The update timestamp next to the version number now always reflects the exact time of the most recent change.'
+    ]
+  },
+  {
+    version: '1.0.1',
+    date: 'September 10, 2026',
+    changes: [
+      'Reordered Identification fields to: SKU, UPC, Season, Official name, MFR date, MFR price, Online exclusive, Dimensions.',
+      'Reordered Ownership & purchase fields to: Status, Date acquired, Total price, Store, Quantity, Store location, Complete listing, Seller.',
+      'Removed the separate Item price, Shipping, Marketplace fee, and Tax fields in favor of a single Total price field.',
+      '"Location" relabeled to "Store location".'
+    ]
+  },
+  {
+    version: '1.0.0',
+    date: 'September 10, 2026',
+    changes: [
+      'Added a "Description" section header above the item description, matching the Identification and Ownership & purchase sections.',
+      'Store now shows the marketplace logo (eBay, Etsy, Poshmark, Mercari, Depop, Vinted) instead of plain text, where available.',
+      'Cropped and resized store logos so they line up with the surrounding text instead of appearing tiny.',
+      'Identification and Ownership & purchase fields now always appear in the same grid position (with a — placeholder when a field has no data), so the layout no longer shifts piece to piece.',
+      'Added this version number / update-time indicator and version history panel.'
+    ]
+  }
+];
+
+function renderChangelog(){
+  document.getElementById('changelogBody').innerHTML = CHANGELOG.map(entry => `
+    <div class="changelog-entry">
+      <div class="changelog-version">${entry.version}</div>
+      <div class="changelog-date">${entry.date}</div>
+      <ul>${entry.changes.map(c => `<li>${c}</li>`).join('')}</ul>
+    </div>
+  `).join('') + `<div class="changelog-footnote">Version history was introduced in ${CHANGELOG[CHANGELOG.length - 1].version}; earlier revisions were not individually logged.</div>`;
+}
+
+function openChangelog(){
+  renderChangelog();
+  document.getElementById('changelogOverlay').classList.add('open');
+}
+
+function closeChangelog(){
+  document.getElementById('changelogOverlay').classList.remove('open');
+}
+
 document.addEventListener('keydown', e => {
   const lightboxOpen = document.getElementById('lightbox').classList.contains('open');
   const modalOpen = document.getElementById('modalOverlay').classList.contains('open');
+  const changelogOpen = document.getElementById('changelogOverlay').classList.contains('open');
   if(e.key === 'Escape'){
     if(lightboxOpen) closeLightbox();
     else if(modalOpen) closeModal();
+    else if(changelogOpen) closeChangelog();
   } else if(e.key === 'ArrowLeft'){
     if(lightboxOpen && currentGalleryImages.length > 1){
       currentGalleryIdx = Math.max(0, currentGalleryIdx - 1); renderGallery();
@@ -665,6 +787,7 @@ function renderStats(items, collections){
     <div class="stat"><span class="num">${totalItems}</span><span class="label">Pieces</span></div>
     <div class="stat"><span class="num">${totalSets}</span><span class="label">Large Shade + Plate Sets</span></div>
     <div class="stat"><span class="num">${totalThemes}</span><span class="label">Themes / Lines</span></div>
+    <button class="version-link" onclick="openChangelog()">${CURRENT_VERSION} · Updated ${UPDATED_AT}</button>
   `;
 }
 
