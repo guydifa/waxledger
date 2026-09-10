@@ -98,6 +98,7 @@
   }
   #search:focus{ outline:2px solid var(--flame); outline-offset:1px; }
 
+  .filter-chips{ display:contents; }
   .chip{
     padding:8px 14px;
     border:1px solid var(--line-strong);
@@ -111,6 +112,19 @@
   }
   .chip:hover{ border-color:var(--flame); color:var(--wick); }
   .chip.active{ background:var(--wick); border-color:var(--wick); color:var(--wax); }
+  .filter-select{
+    display:none;
+    flex:1 1 220px; max-width:340px;
+    padding:10px 14px;
+    border:1px solid var(--line-strong); border-radius:2px;
+    font-family:'Public Sans', sans-serif; font-size:0.95rem;
+    background:#FDFDFC; color:var(--wick);
+  }
+  .filter-select:focus{ outline:2px solid var(--flame); outline-offset:1px; }
+  @media (max-width:760px){
+    .filter-chips{ display:none; }
+    .filter-select{ display:block; width:100%; max-width:none; }
+  }
 
   main{ padding:24px 28px 60px; }
   .grid{
@@ -338,12 +352,22 @@
         <div class="stats-row" id="statsRow"></div>
         <div class="controls">
           <input id="search" type="text" placeholder="Search by name, type, or SKU…" oninput="render()">
-          <button class="chip" data-filter="all" onclick="setFilter('all', this)">All</button>
-          <button class="chip active" data-filter="Yes" onclick="setFilter('Yes', this)">Owned</button>
-          <button class="chip" data-filter="Awaiting Delivery" onclick="setFilter('Awaiting Delivery', this)">Awaiting Delivery</button>
-          <button class="chip" data-filter="Looking" onclick="setFilter('Looking', this)">Looking</button>
-          <button class="chip" data-filter="Maybe (Verify)" onclick="setFilter('Maybe (Verify)', this)">Needs Verifying</button>
-          <button class="chip" data-filter="sets" onclick="setFilter('sets', this)">Shade + Plate Sets</button>
+          <div class="filter-chips">
+            <button class="chip" data-filter="all" onclick="setFilter('all', this)">All</button>
+            <button class="chip active" data-filter="Yes" onclick="setFilter('Yes', this)">Owned</button>
+            <button class="chip" data-filter="Awaiting Delivery" onclick="setFilter('Awaiting Delivery', this)">Awaiting Delivery</button>
+            <button class="chip" data-filter="Looking" onclick="setFilter('Looking', this)">Looking</button>
+            <button class="chip" data-filter="Maybe (Verify)" onclick="setFilter('Maybe (Verify)', this)">Needs Verifying</button>
+            <button class="chip" data-filter="sets" onclick="setFilter('sets', this)">Shade + Plate Sets</button>
+          </div>
+          <select class="filter-select" id="filterSelect" onchange="setFilter(this.value)" aria-label="Filter">
+            <option value="all">All</option>
+            <option value="Yes" selected>Owned</option>
+            <option value="Awaiting Delivery">Awaiting Delivery</option>
+            <option value="Looking">Looking</option>
+            <option value="Maybe (Verify)">Needs Verifying</option>
+            <option value="sets">Shade + Plate Sets</option>
+          </select>
         </div>
       </div>
       <div class="header-right">
@@ -395,7 +419,10 @@ let currentFilter = 'Yes';
 function setFilter(f, el){
   currentFilter = f;
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+  const btn = el || document.querySelector(`.chip[data-filter="${f}"]`);
+  if(btn) btn.classList.add('active');
+  const sel = document.getElementById('filterSelect');
+  if(sel) sel.value = f;
   render();
 }
 
