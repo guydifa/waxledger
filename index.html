@@ -428,6 +428,9 @@ function setFilter(f, el){
   render();
 }
 
+// Photos are either embedded (base64) or, once published from the database, links.
+const imgSrc = x => /^https?:/.test(x) ? x : 'data:image/jpeg;base64,' + x;
+
 function statusDot(owned){
   if(owned === 'Yes') return 'owned';
   if(owned === 'Awaiting Delivery') return 'awaiting';
@@ -547,10 +550,10 @@ function render(){
     if(thumbs.length === 0){
       thumbHtml = `<div class="thumb empty">No photo yet</div>`;
     } else if(thumbs.length === 1){
-      thumbHtml = `<div class="thumb"><img src="data:image/jpeg;base64,${thumbs[0]}" alt="${c.name}" loading="lazy" onclick="event.stopPropagation(); openCollection(${cidx}, ${thumbPieceIdx[0]})"></div>`;
+      thumbHtml = `<div class="thumb"><img src="${imgSrc(thumbs[0])}" alt="${c.name}" loading="lazy" onclick="event.stopPropagation(); openCollection(${cidx}, ${thumbPieceIdx[0]})"></div>`;
     } else {
       const cells = [0,1,2,3].map(n => thumbs[n]
-        ? `<img src="data:image/jpeg;base64,${thumbs[n]}" alt="${c.name}" loading="lazy" onclick="event.stopPropagation(); openCollection(${cidx}, ${thumbPieceIdx[n]})">`
+        ? `<img src="${imgSrc(thumbs[n])}" alt="${c.name}" loading="lazy" onclick="event.stopPropagation(); openCollection(${cidx}, ${thumbPieceIdx[n]})">`
         : `<div class="quad-empty"></div>`
       ).join('');
       thumbHtml = `<div class="thumb quad">${cells}</div>`;
@@ -656,7 +659,7 @@ function renderPiece(){
   ` : `<span class="piece-count">${coll.name}</span>`;
 
   document.getElementById('modalPhoto').innerHTML = images.length
-    ? `<img src="data:image/jpeg;base64,${images[0].large}" alt="${i.name}" onclick="openGallery()">`
+    ? `<img src="${imgSrc(images[0].large)}" alt="${i.name}" onclick="openGallery()">`
     : `<div class="modal-photo empty">No photo yet</div>`;
   document.getElementById('modalPhoto').className = 'modal-photo' + (images.length ? '' : ' empty');
 
@@ -724,11 +727,11 @@ function openGallery(){
 }
 
 function renderGallery(){
-  document.getElementById('lightboxImg').src = 'data:image/jpeg;base64,' + currentGalleryImages[currentGalleryIdx];
+  document.getElementById('lightboxImg').src = imgSrc(currentGalleryImages[currentGalleryIdx]);
   const strip = document.getElementById('lightboxStrip');
   if(currentGalleryImages.length > 1){
     strip.innerHTML = currentGalleryImages.map((img, idx) => `
-      <img src="data:image/jpeg;base64,${img}" class="${idx===currentGalleryIdx?'active':''}"
+      <img src="${imgSrc(img)}" class="${idx===currentGalleryIdx?'active':''}"
            onclick="event.stopPropagation(); currentGalleryIdx=${idx}; renderGallery();">
     `).join('');
   } else {
