@@ -482,16 +482,32 @@ function isOwnedLargeSet(pieces){
     && pieces.some(p => p.itemType === 'Jar Candle Tray (Plate)' && p.size === 'Large' && p.owned === 'Yes');
 }
 
+// Sets stay together; sets with something owned first, newest first (date added, then date acquired).
+// Pieces within a set follow the type order below, not-owned pieces last.
+const TYPE_ORDER = [
+  p => p.itemType === 'Jar Shade' && p.size === 'Large',
+  p => /Plate/.test(p.itemType) && p.size === 'Large',
+  p => /3D/.test(p.itemType),
+  p => /Tart Warmer \(Candle\)/.test(p.itemType),
+  p => /Tart Warmer/.test(p.itemType),
+  p => p.itemType === 'Jar Shade' && p.size === 'Medium',
+  p => /Plate/.test(p.itemType) && p.size === 'Medium',
+  p => p.itemType === 'Jar Shade',
+  p => /Plate/.test(p.itemType),
+  p => /Votive/.test(p.itemType),
+  p => /Tea ?Light/i.test(p.itemType),
+  p => /Holder/.test(p.itemType),
+  p => /Illuma/.test(p.itemType)
+];
+const isOwnedPiece = p => p.owned === 'Yes';
+const typeRank = p => { const k = TYPE_ORDER.findIndex(f => f(p)); return k < 0 ? TYPE_ORDER.length : k; };
 function sortCollectionsDefault(collections){
-  return [...collections].sort((a, b) => {
-    const aLarge = isOwnedLargeSet(a.pieces), bLarge = isOwnedLargeSet(b.pieces);
-    if(aLarge !== bLarge) return aLarge ? -1 : 1;
-    const aImg = hasAnyImage(a.pieces), bImg = hasAnyImage(b.pieces);
-    if(aImg !== bImg) return aImg ? -1 : 1;
-    const aSet = isCompleteSet(a.pieces), bSet = isCompleteSet(b.pieces);
-    if(aSet !== bSet) return aSet ? -1 : 1;
-    return latestAcquiredDate(b.pieces) - latestAcquiredDate(a.pieces);
-  });
+  const t = v => { const n = Date.parse(v); return isNaN(n) ? 0 : n; };
+  const key = c => ({ owned: c.pieces.some(isOwnedPiece) ? 1 : 0,
+    added: Math.max(0, ...c.pieces.map(p => t(p.addedAt))), acquired: Math.max(0, ...c.pieces.map(p => t(p.dateAquired))) });
+  collections.forEach(c => c.pieces.sort((a, b) => (isOwnedPiece(b) - isOwnedPiece(a)) || (typeRank(a) - typeRank(b))));
+  return [...collections].map(c => ({ c, k: key(c) }))
+    .sort((a, b) => (b.k.owned - a.k.owned) || (b.k.added - a.k.added) || (b.k.acquired - a.k.acquired)).map(x => x.c);
 }
 
 function render(){
