@@ -499,7 +499,7 @@ const TYPE_ORDER = [
   p => /Holder/.test(p.itemType),
   p => /Illuma/.test(p.itemType)
 ];
-const isOwnedPiece = p => p.owned === 'Yes';
+const isOwnedPiece = p => p.owned === 'Yes' || p.owned === 'Awaiting Delivery';   // on its way = owned
 const typeRank = p => { const k = TYPE_ORDER.findIndex(f => f(p)); return k < 0 ? TYPE_ORDER.length : k; };
 function sortCollectionsDefault(collections){
   const t = v => { const n = Date.parse(v); return isNaN(n) ? 0 : n; };
