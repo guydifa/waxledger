@@ -161,6 +161,9 @@
   .thumb.quad .quad-empty{ background:#FFFFFF; }
   .card-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:6px; flex:1; background:#FDFDFC; }
   .card-body h3{ font-size:1.05rem; margin:0; line-height:1.25; }
+  .pieces{ margin-top:auto; padding-top:8px; display:flex; gap:6px; }
+  .piece-icon{ display:inline-flex; cursor:help; }
+  .piece-icon svg{ width:30px; height:30px; background:var(--wax-card); border:1px solid var(--line); border-radius:7px; padding:3px; box-sizing:border-box; }
   .meta-row{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:0.82rem; color:var(--wick-soft); }
   .status-bar{
     padding:5px 16px;
@@ -431,6 +434,116 @@ function setFilter(f, el){
 // Photos are either embedded (base64) or, once published from the database, links.
 const imgSrc = x => /^https?:/.test(x) ? x : 'data:image/jpeg;base64,' + x;
 
+// Item-type icons (same drawings as the admin site), one line per piece at the bottom of each card.
+function typeIcon(type, size) {
+  const B = '#5C4326', G = '#C9A15C', T = '#FFFFFF';
+  const t = String(type || '');
+  const small = size === 'Small';
+  let body, fixed = '';   // fixed: zoom box for small pieces, taken from the large drawing so they stay visibly smaller
+  // Shade: glass-shade proportions (top opening 29% of the base), sharp corners, thin beige top and bottom edges.
+  if (/Shade/.test(t) && small) {   // small shade (approved): shorter and narrower, same baseline
+    body = `<path d="M20.5 15 L27.5 15 L37 37 L11 37 Z" fill="${B}"/>
+    <path d="M20.5 15 L27.5 15 L28.02 16.2 L19.98 16.2 Z M11.52 35.8 L36.48 35.8 L37 37 L11 37 Z" fill="${G}"/>`;
+    fixed = '0.46 -0.04 47.08 47.08';
+  }
+  else if (/Shade/.test(t)) body = `<path d="M18.2 10 L29.8 10 L45.4 37 L2.6 37 Z" fill="${B}"/>
+    <path d="M18.2 10 L29.8 10 L30.5 11.2 L17.5 11.2 Z M3.3 35.8 L44.7 35.8 L45.4 37 L2.6 37 Z" fill="${G}"/>`;
+  // 3D tray: the plate with sculpted figures (lighter brown) on the back rim.
+  else if (/3D/.test(t)) body = `<path d="M9.5 28 L13.2 19 L11.5 19 L14.6 11.5 L17.7 19 L16 19 L19.7 28 Z" fill="#8A6A45"/>
+    <circle cx="35.5" cy="24.5" r="3.8" fill="#8A6A45"/><circle cx="35.5" cy="18.7" r="2.7" fill="#8A6A45"/>
+    <ellipse cx="24" cy="31" rx="21.5" ry="5.6" fill="${B}"/>
+    <path d="M2.5 31 A21.5 5.6 0 0 0 45.5 31 L45.5 32.1 A21.5 5.6 0 0 1 2.5 32.1 Z" fill="${G}"/>
+    <ellipse cx="24" cy="30.6" rx="12.5" ry="3" fill="#FFFDF8" stroke="${G}" stroke-width="1"/>
+    <path d="M11.9 30.3 A12.5 3 0 0 1 36.1 30.3 A12.5 2.2 0 0 0 11.9 30.3 Z" fill="#E6D5B5"/>`;
+  else if (/Plate/.test(t) && small) {   // small plate (approved): two-thirds size, bottom lined up with the large plate
+    body = `<g transform="translate(0 1.4)"><ellipse cx="24" cy="24" rx="14" ry="4.2" fill="${B}"/>
+    <path d="M10 24 A14 4.2 0 0 0 38 24 L38 25.1 A14 4.2 0 0 1 10 25.1 Z" fill="${G}"/>
+    <ellipse cx="24" cy="23.7" rx="9" ry="2.4" fill="#FFFDF8" stroke="${G}" stroke-width="1"/>
+    <path d="M15.1 23.5 A9 2.4 0 0 1 32.9 23.5 A9 1.8 0 0 0 15.1 23.5 Z" fill="#E6D5B5"/></g>`;
+    fixed = '0.35 0.9 47.3 47.3';
+  }
+  else if (/Plate/.test(t)) body = `<ellipse cx="24" cy="24" rx="21.5" ry="5.6" fill="${B}"/>
+    <path d="M2.5 24 A21.5 5.6 0 0 0 45.5 24 L45.5 25.1 A21.5 5.6 0 0 1 2.5 25.1 Z" fill="${G}"/>
+    <ellipse cx="24" cy="23.6" rx="12.5" ry="3" fill="#FFFDF8" stroke="${G}" stroke-width="1"/>
+    <path d="M11.9 23.3 A12.5 3 0 0 1 36.1 23.3 A12.5 2.2 0 0 0 11.9 23.3 Z" fill="#E6D5B5"/>`;
+  // Illuma-Lid (approved B): seen from above - seven raised triangle panels around a star-shaped opening.
+  else if (/Illuma|Topper/.test(t)) body = `<circle cx="24" cy="24" r="20.6" fill="${G}"/>
+    <circle cx="24" cy="24" r="19.8" fill="${B}"/>
+    <circle cx="24" cy="24" r="16.6" fill="#FFFDF8"/>
+    <path d="M17.24 8.84 A16.6 16.6 0 0 1 30.76 8.84 L25.14 18.12 Q24.00 20.00 22.86 18.12 Z M31.64 9.26 A16.6 16.6 0 0 1 40.07 19.83 L29.31 21.22 Q27.13 21.51 27.89 19.44 Z M40.29 20.79 A16.6 16.6 0 0 1 37.28 33.96 L29.48 26.42 Q27.90 24.89 29.99 24.20 Z M36.67 34.73 A16.6 16.6 0 0 1 24.49 40.59 L25.53 29.79 Q25.74 27.60 27.58 28.81 Z M23.51 40.59 A16.6 16.6 0 0 1 11.33 34.73 L20.42 28.81 Q22.26 27.60 22.47 29.79 Z M10.72 33.96 A16.6 16.6 0 0 1 7.71 20.79 L18.01 24.20 Q20.10 24.89 18.52 26.42 Z M7.93 19.83 A16.6 16.6 0 0 1 16.36 9.26 L20.11 19.44 Q20.87 21.51 18.69 21.22 Z" fill="#8A6A45" stroke="${B}" stroke-width="0.7" stroke-linejoin="round"/>
+    <path d="M21.10 9.69 L23.46 15.02 M24.00 9.40 L24.00 15.00 M26.90 9.69 L24.54 15.02 M33.38 12.81 L30.69 17.98 M35.41 14.90 L31.04 18.39 M37.00 17.35 L31.36 18.82 M38.60 24.36 L32.88 25.47 M38.23 27.25 L32.77 26.00 M37.30 30.01 L32.64 26.53 M32.82 35.63 L28.38 31.86 M30.33 37.15 L27.90 32.11 M27.60 38.15 L27.41 32.33 M20.40 38.15 L20.59 32.33 M17.67 37.15 L20.10 32.11 M15.18 35.63 L19.62 31.86 M10.70 30.01 L15.36 26.53 M9.77 27.25 L15.23 26.00 M9.40 24.36 L15.12 25.47 M11.00 17.35 L16.64 18.82 M12.59 14.90 L16.96 18.39 M14.62 12.81 L17.31 17.98" stroke="${B}" stroke-width="0.6" stroke-linecap="round"/>`;
+  // Electric tart warmer (approved): same dish and base as the candle warmer, lightning bolt instead of the flame.
+  else if (/Electric/.test(t)) body = `<path d="M11.5 13 L36.5 13 L33.5 18.5 L14.5 18.5 Z" fill="${B}"/>
+    <path d="M11.5 13 L36.5 13 L35.85 14.2 L12.15 14.2 Z" fill="${G}"/>
+    <path d="M14.5 18.5 L33.5 18.5 L33.5 39 L14.5 39 Z" fill="${B}"/>
+    <path d="M14.5 37.8 H33.5 V39 H14.5 Z" fill="${G}"/>
+    <path d="M25.6 22.8 L20.6 29.9 H23.8 L22.4 34.3 L27.6 26.9 H24.4 Z" fill="#FFFDF8"/>`;
+  else if (/Tart/.test(t)) body = `<path d="M11.5 13 L36.5 13 L33.5 18.5 L14.5 18.5 Z" fill="${B}"/>
+    <path d="M11.5 13 L36.5 13 L35.85 14.2 L12.15 14.2 Z" fill="${G}"/>
+    <path d="M14.5 18.5 L33.5 18.5 L33.5 39 L14.5 39 Z" fill="${B}"/>
+    <path d="M14.5 37.8 H33.5 V39 H14.5 Z" fill="${G}"/>
+    <path d="M19.5 37.8 V30 A4.5 4.5 0 0 1 28.5 30 V37.8 Z" fill="#FFFDF8"/>
+    <path d="M24 26.6 C25.8 28.8 25.8 31 24 32.6 C22.2 31 22.2 28.8 24 26.6 Z" fill="${G}"/>
+    <path d="M21.6 34.2 H26.4 V37.8 H21.6 Z" fill="#E6D5B5"/>`;
+  // Tea light holder (approved): short cup with a beige rim, light inside and a low flame.
+  else if (/Tea ?light/i.test(t)) body = `<g transform="translate(24 30) scale(0.82) translate(-24 -28)">
+    <path d="M13 26 L35 26 L35 35 A11 2 0 0 1 13 35 Z" fill="${B}"/>
+    <path d="M13 35 A11 2 0 0 0 35 35 L35 33.8 A11 2 0 0 1 13 33.8 Z" fill="${G}"/>
+    <ellipse cx="24" cy="26" rx="11" ry="2.2" fill="${G}"/><ellipse cx="24" cy="26" rx="9.9" ry="1.4" fill="#FFFDF8"/>
+    <path d="M24 19.6 C26.2 22.2 26.2 24.6 24 26.4 C21.8 24.6 21.8 22.2 24 19.6 Z" fill="${G}"/></g>`;
+  // Votive holder (approved): smaller version of the jar holder with a slight V.
+  else if (/Votive/.test(t)) body = `<path d="M15.5 18 L32.5 18 L30 37 A6 1.3 0 0 1 18 37 Z" fill="${B}"/>
+    <path d="M18 37 A6 1.3 0 0 0 30 37 L30.16 35.8 A6.2 1.3 0 0 1 17.84 35.8 Z" fill="${G}"/>
+    <ellipse cx="24" cy="18" rx="8.5" ry="1.7" fill="${G}"/>
+    <ellipse cx="24" cy="18" rx="7.5" ry="1" fill="#4A361F"/>`;
+  else if (/Holder/.test(t)) body = `<path d="M13.5 10 L34.5 10 L34.5 38 A10.5 2 0 0 1 13.5 38 Z" fill="${B}"/>
+    <path d="M13.5 38 A10.5 2 0 0 0 34.5 38 L34.5 36.8 A10.5 2 0 0 1 13.5 36.8 Z" fill="${G}"/>
+    <ellipse cx="24" cy="10" rx="10.5" ry="2" fill="${G}"/>
+    <ellipse cx="24" cy="10" rx="9.4" ry="1.2" fill="#4A361F"/>`;
+  // Anything else (approved E): a mini collection - shade, plate, holder and warmer.
+  else body = `<path d="M10.5 9 L15.5 9 L20 20 L6 20 Z" fill="${B}"/><path d="M6.3 19.3 H19.7 V20 H6.3 Z" fill="${G}"/>
+    <ellipse cx="35" cy="16" rx="8" ry="2.3" fill="${B}"/><ellipse cx="35" cy="15.8" rx="4.5" ry="1.2" fill="#FFFDF8"/>
+    <path d="M8 28 H18 V40 H8 Z" fill="${B}"/><path d="M8 28 H18 V28.8 H8 Z M8 39.2 H18 V40 H8 Z" fill="${G}"/>
+    <path d="M29 29 H41 L39.5 32 H30.5 Z" fill="${B}"/><path d="M31 32 H39 V40 H31 Z" fill="${B}"/><path d="M33.5 40 V36.5 A1.5 1.5 0 0 1 36.5 36.5 V40 Z" fill="#FFFDF8"/>`;
+  return `<svg class="typeicon" viewBox="0 0 48 48"${fixed ? ` data-fit="${fixed}"` : ''} role="img" aria-label="${([t || 'Item', size].filter(Boolean).join(', '))}">${body}</svg>`;
+}
+
+// Pieces in the site's usual order: shade, plate, warmers, Illuma-Lid, then the rest; larger sizes first.
+function piecesInOrder(pieces){
+  // Same order as the admin site: large shade, large plate, 3D, tart warmers, medium/small shades and plates, then the rest.
+  const ORDER = [
+    p => p.itemType === 'Jar Shade' && p.size === 'Large',
+    p => /Plate/.test(p.itemType) && p.size === 'Large',
+    p => /3D/.test(p.itemType),
+    p => /Tart Warmer \(Candle\)/.test(p.itemType),
+    p => /Tart Warmer/.test(p.itemType),
+    p => p.itemType === 'Jar Shade' && p.size === 'Medium',
+    p => /Plate/.test(p.itemType) && p.size === 'Medium',
+    p => p.itemType === 'Jar Shade',
+    p => /Plate/.test(p.itemType),
+    p => /Votive/.test(p.itemType),
+    p => /Tea ?Light/i.test(p.itemType),
+    p => /Holder/.test(p.itemType),
+    p => /Illuma/.test(p.itemType)
+  ];
+  const rank = p => { const k = ORDER.findIndex(f => f(p)); return k < 0 ? ORDER.length : k; };
+  const owned = p => p.owned === 'Yes' || p.owned === 'Awaiting Delivery';
+  return [...pieces].sort((a, b) => (owned(b) - owned(a)) || (rank(a) - rank(b)));
+}
+
+// Zoom each small icon's drawing to fill its square so it's readable at card size.
+function fitIcons(root){
+  root.querySelectorAll('.piece-icon svg').forEach(svg => {
+    try {
+      if(svg.dataset.fit){ svg.setAttribute('viewBox', svg.dataset.fit); return; }
+      const b = svg.getBBox();
+      if(!b.width || !b.height) return;
+      const side = Math.max(b.width, b.height) * 1.1;
+      svg.setAttribute('viewBox', `${b.x + b.width / 2 - side / 2} ${b.y + b.height / 2 - side / 2} ${side} ${side}`);
+    } catch(e) { /* not rendered yet */ }
+  });
+}
+
 function statusDot(owned){
   if(owned === 'Yes') return 'owned';
   if(owned === 'Awaiting Delivery') return 'awaiting';
@@ -590,10 +703,15 @@ function render(){
         <div class="meta-row">
           <span class="status ${ownedDot}"><span class="dot ${ownedDot}"></span>${ownedLabel}</span>
         </div>
+        <div class="pieces">${piecesInOrder(c.pieces).slice(0, 5).map(p => {
+          const what = [p.itemType || 'Other', p.size].filter(Boolean).join(' · ');
+          return `<span class="piece-icon" title="${what}" aria-label="${what}">${typeIcon(p.itemType, p.size)}</span>`;
+        }).join('')}</div>
       </div>
     </div>
   `;
   }).join('');
+  fitIcons(grid);
 }
 
 function yearSuffix(mfrDate){
